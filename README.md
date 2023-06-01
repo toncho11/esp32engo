@@ -1,5 +1,5 @@
 # esp32engo
-Communication between the ESP32 and ENGO smart glasses.
+Communication between the ESP32 and ENGO smart glasses. ENGO's documentation is available [here](https://github.com/ActiveLook/Activelook-API-Documentation/blob/main/ActiveLook_API.md#1-introduction).
 
 # Compilation on Windows:
 
