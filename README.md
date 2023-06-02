@@ -1,5 +1,7 @@
 # esp32engo
-Communication between the ESP32 and ENGO smart glasses. ENGO's documentation is available [here](https://github.com/ActiveLook/Activelook-API-Documentation/blob/main/ActiveLook_API.md#1-introduction).
+Communication between the ESP32 and ENGO smart glasses. Docs:
+* [ENGO documentation](https://github.com/ActiveLook/Activelook-API-Documentation/blob/main/ActiveLook_API.md#1-introduction)
+* [esp-nimble-cpp documentation](https://h2zero.github.io/esp-nimble-cpp)
 
 # Compilation on Windows:
 
