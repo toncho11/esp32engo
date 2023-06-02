@@ -18,14 +18,14 @@ void print_info(NimBLEClient *pClient)
                 
 	if (pService != nullptr) {
 		
-		ESP_LOGE(TAG_BLE, "Found DeviceInformationService");
+		ESP_LOGI(TAG_BLE, "Found DeviceInformationService");
 		NimBLERemoteCharacteristic *pCharacteristic = pService->getCharacteristic(DeviceInformationService_ManufacturerUUID);
 		
 		if (pCharacteristic != nullptr) {
 			
 			ESP_LOGI(TAG_BLE, "Found DeviceInformationService_Manufacturer");
 			std::string value = pCharacteristic->readValue();
-			ESP_LOGI(TAG_BLE, "Manufacturer Name String: %s", value.c_str()); //TODO: activate
+			ESP_LOGI(TAG_BLE, "Manufacturer Name String: %s", value.c_str());
 		}
 		else
 		{
@@ -95,6 +95,7 @@ extern "C" void app_main(void)
             }
             
             NimBLEDevice::deleteClient(pClient);
+			ESP_LOGI(TAG_BLE, "Exit");
         }
     }
 }
