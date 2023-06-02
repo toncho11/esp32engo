@@ -48,18 +48,28 @@ void send_command(NimBLEClient *pClient)
 		
 		NimBLERemoteCharacteristic *pCharacteristic = pService->getCharacteristic(ActiveLookCommandsInterface_RXActiveLookUUID);
 		
-		if (pCharacteristic != nullptr) { 
-		
-			ESP_LOGI(TAG_BLE, "Found characteristic ActiveLookCommandsInterface_RXActiveLookUUID");
+		if (pCharacteristic != nullptr) 
+		{ 
+			ESP_LOGI(TAG_BLE, "Found characteristic: ActiveLookCommandsInterface_RXActiveLookUUID");
+			
+			//construct and send 
+			
+			//ENGO is Big Edian
+			//ESP32 is Little Endian
+			const uint8_t *command = (uint8_t*)malloc(7);
+			
+			//swap bytes only for values in the command that are bigger than 1 byte
+			
+			bool state = pCharacteristic->writeValue(command, 7, true);
 		}
 		else
 		{
-			ESP_LOGE(TAG_BLE, "No characteristic ActiveLookCommandsInterface_RXActiveLook");
+			ESP_LOGE(TAG_BLE, "No characteristic: ActiveLookCommandsInterface_RXActiveLook");
 		}		
 	}
 	else
 	{
-		ESP_LOGE(TAG_BLE, "No service ActiveLookCommandsInterface");
+		ESP_LOGE(TAG_BLE, "No service: ActiveLookCommandsInterface");
 	}
 	
 	//put header, footer, length
