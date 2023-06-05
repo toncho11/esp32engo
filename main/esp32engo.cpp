@@ -6,6 +6,8 @@ https://h2zero.github.io/esp-nimble-cpp/
 The extension of this file must be .cpp and you need to use 'extern "C" void app_main(void)' in order to use esp-nimble-cpp.
 */
 
+#pragma GCC diagnostic ignored "-Wuninitialized"
+
 #include "esp_log.h"
 #include "NimBLEDevice.h"
 #include "EngoServicesCharacteristics.h"
@@ -49,6 +51,29 @@ void print_info(NimBLEClient *pClient)
 	}
 }
 
+void AddHF(uint8_t** command, int length)
+{
+	(*command)[0] = 0xFF; //start
+	(*command)[length - 1] = 0xAA; //end
+}
+void Demo(uint8_t demo_id, uint8_t** command, int* length)
+{
+	*command = (uint8_t*)malloc(6);
+	
+	(*command)[1] = 0x03; //command id - demo now
+	(*command)[2] = 0;
+	//*command[2] = 1; //Command Format, 
+	//*command[2] << 4;
+	//bit 5 is the size of the length, must be 0 for demo
+	//bit 4 to 1 defines the size of the query id
+	//query id must be set to 0 for the demo command, because there is no query id
+	
+	(*command)[3] = 6; //size of all is 6 now
+	(*command)[4] = 1; //data for the command, demo in this case
+	
+	*length = 6; //must also reserve 2 for header / footer		
+}
+
 void send_command(NimBLEClient *pClient)
 {
 	ESP_LOGI(TAG_BLE, "send_command entered");
@@ -65,26 +90,11 @@ void send_command(NimBLEClient *pClient)
 		{ 
 			ESP_LOGI(TAG_BLE, "Found characteristic: ActiveLookCommandsInterface_RXActiveLookUUID");
 			
-			//construct and send 
+			uint8_t* command = NULL;
+			int* length = (int*)malloc(sizeof(int));//total length of the command
 			
-			//uint8_t payload = 2;
-			
-			uint8_t* command = (uint8_t*)malloc(6);
-			command[0] = 0xFF; //start
-			command[1] = 0x03; //command id - demo now
-			command[2] = 0;
-			//*command[2] = 1; //Command Format, 
-			//*command[2] << 4;
-			//bit 5 is the size of the length, must be 0 for demo
-			//bit 4 to 1 defines the size of the query id
-			//query id must be set to 0 for the demo command, because there is no query id
-			
-			command[3] = 6; //size of all is 6 now
-			command[4] = 1; //data for the command, demo in this case
-			command[5] = 0xAA;
-			
-            
-
+            Demo(1, &command, length);
+			AddHF(&command, *length);
 			
 			//ENGO is Big Edian
 			//ESP32 is Little Endian
@@ -92,7 +102,9 @@ void send_command(NimBLEClient *pClient)
 			
 			//swap bytes only for values in the command that are bigger than 1 byte
 			
-			bool state = pCharacteristic->writeValue(command, 7, true);
+			bool state = pCharacteristic->writeValue(command, *length, true);
+			
+			free(command);
 		}
 		else
 		{
