@@ -6,6 +6,7 @@ custom for dedicated ActiveLook commands and firmware updates).
 */
 
 #include "inttypes.h"
+#include "NimBLEDevice.h"
 
 /* Services */
 
@@ -13,12 +14,13 @@ custom for dedicated ActiveLook commands and firmware updates).
 const uint16_t GenericAttributeUUID = 0x1801; //Without characteristics
 
 //2 Generic Access
-const uint16_t GenericAccessUUID = 0x1800;
+static BLEUUID GenericAccessUUID((uint16_t)0x1800);
 
 //2.1 Characteristics
-const char* GenericAccess_DeviceNameUUID = "00002A00-0000-1000-8000-00805F9B34FB";
-const char* GenericAccess_AppearanceUUID =	"00002A01-0000-1000-8000-00805F9B34FB";
-const char* GenericAccess_PeripheralUUID = "00002A04-0000-1000-8000-00805F9B34FB";
+//static BLEUUID GenericAccess_DeviceNameUUID("00002A00-0000-1000-8000-00805F9B34FB");
+static BLEUUID GenericAccess_DeviceNameUUID((uint16_t)0x2a00);
+const char* GenericAccess_AppearanceUUID = "00002A01-0000-1000-8000-00805F9B34FB"; //possible not correct
+const char* GenericAccess_PeripheralUUID = "00002A04-0000-1000-8000-00805F9B34FB"; //possibly not correct
 
 //3 Device Information Service
 const uint16_t DeviceInformationServiceUUID = 0x180A;
@@ -38,11 +40,13 @@ const uint16_t BatteryServiceUUID = 0x180F;
 const char* BatteryService_BatteryLevelUUID	= "00002A19-0000-1000-8000-00805F9B34FB"; //battery level (in %)
 
 //5 Custom Service ActiveLook Command Interface
-const char* ActiveLookCommandsInterfaceUUID = "0x0783b03e-8535-b5a0-7140-a304d2495cb7";
+static BLEUUID ActiveLookCommandsInterfaceUUID("0783b03e-8535-b5a0-7140-a304d2495cb7");
 
 //5.1 Characteristics
 const char* ActiveLookCommandsInterface_TXActiveLookUUID = "0783b03e-8535-b5a0-7140-a304d2495cb8";
-const char* ActiveLookCommandsInterface_RXActiveLookUUID = "0783b03e-8535-b5a0-7140-a304d2495cbA";
+
+static BLEUUID ActiveLookCommandsInterface_RXActiveLookUUID("0783b03e-8535-b5a0-7140-a304d2495cbA");
+
 const char* ActiveLookCommandsInterface_ControlUUID	     = "0783b03e-8535-b5a0-7140-a304d2495cb9";
 const char* ActiveLookCommandsInterface_GestureEventUUID = "0783b03e-8535-b5a0-7140-a304d2495cbb";
 const char* ActiveLookCommandsInterface_TouchEventUUID   = "0783b03e-8535-b5a0-7140-a304d2495cbc";
