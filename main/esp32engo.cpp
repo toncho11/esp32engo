@@ -14,18 +14,28 @@ const char* TAG_BLE = "esp32engo";
 
 void print_info(NimBLEClient *pClient)
 {
-	NimBLERemoteService *pService = pClient->getService(DeviceInformationServiceUUID);
+	ESP_LOGI(TAG_BLE, "print_info entered");
+	
+	NimBLERemoteService *pService = pClient->getService(GenericAccessUUID);
                 
+/* 	std::vector< NimBLERemoteCharacteristic * >* chars = pService->getCharacteristics(true);
+	
+	for (int c=0; c<chars->size(); c++)
+	{
+		NimBLERemoteCharacteristic* cc = chars[c].at(c);
+		ESP_LOGI(TAG_BLE, "char: %s", cc->getUUID().toString().c_str());
+	} */
+	
 	if (pService != nullptr) {
 		
-		ESP_LOGI(TAG_BLE, "Found DeviceInformationService");
-		NimBLERemoteCharacteristic *pCharacteristic = pService->getCharacteristic(DeviceInformationService_ManufacturerUUID);
+		ESP_LOGI(TAG_BLE, "Found GenericAccessUUID");
+		NimBLERemoteCharacteristic *pCharacteristic = pService->getCharacteristic(GenericAccess_DeviceNameUUID);
 		
 		if (pCharacteristic != nullptr) {
 			
-			ESP_LOGI(TAG_BLE, "Found DeviceInformationService_Manufacturer");
+			ESP_LOGI(TAG_BLE, "GenericAccess_DeviceName");
 			std::string value = pCharacteristic->readValue();
-			ESP_LOGI(TAG_BLE, "Manufacturer Name String: %s", value.c_str());
+			ESP_LOGI(TAG_BLE, "Device Name String: %s", value.c_str());
 		}
 		else
 		{
@@ -40,6 +50,8 @@ void print_info(NimBLEClient *pClient)
 
 void send_command(NimBLEClient *pClient)
 {
+	ESP_LOGI(TAG_BLE, "send_command entered");
+	
 	NimBLERemoteService *pService = pClient->getService(ActiveLookCommandsInterfaceUUID);
 	
 	if (pService != nullptr) {
@@ -56,11 +68,11 @@ void send_command(NimBLEClient *pClient)
 			
 			//ENGO is Big Edian
 			//ESP32 is Little Endian
-			const uint8_t *command = (uint8_t*)malloc(7);
+			//const uint8_t *command = (uint8_t*)malloc(7);
 			
 			//swap bytes only for values in the command that are bigger than 1 byte
 			
-			bool state = pCharacteristic->writeValue(command, 7, true);
+			//bool state = pCharacteristic->writeValue(command, 7, true);
 		}
 		else
 		{
@@ -82,16 +94,40 @@ extern "C" void app_main(void)
     NimBLEDevice::init("");
     
     NimBLEScan *pScan = NimBLEDevice::getScan();
-    NimBLEScanResults results = pScan->start(10); //scan for 10 seconds
+    NimBLEScanResults results = pScan->start(5); //scan for 10 seconds
     
-    NimBLEUUID serviceUuid(DeviceInformationServiceUUID); //TODO: better filter by manufacturer ID ending by 0x08F2
+    //NimBLEUUID serviceUuid(DeviceInformationServiceUUID); //TODO: better filter by manufacturer ID ending by 0x08F2
     
+	bool ENGOfound = false;
+	
     for(int i = 0; i < results.getCount(); i++) {
 		
         NimBLEAdvertisedDevice device = results.getDevice(i);
         
-        if (device.isAdvertisingService(serviceUuid)) { //TODO: better filter by manufacturer ID ending by 0x08F2
+		std::string devName = "";
+		
+		if (device.haveName())
+		{
+			devName = device.getName();
+			ESP_LOGI(TAG_BLE, "Device name: %s", devName.c_str());
+		}
+		else
+			continue;
+		
+		//if (!device.haveManufacturerData())
+        //    continue;			
+        
+		//std::string manfData = device.getManufacturerData();
+		
+		//ESP_LOGI(TAG_BLE, "Manufacturer data: %s", manfData.c_str());
+		
+		std::size_t foundName = devName.find("ENGO");
+		
+        if (foundName != std::string::npos) { //TODO: better filter by manufacturer ID ending by 0x08F2
             
+			ENGOfound = true;
+			ESP_LOGI(TAG_BLE, "ENGO Device found.");
+			
 			NimBLEClient *pClient = NimBLEDevice::createClient();
             
             if (pClient->connect(&device)) 
@@ -105,7 +141,12 @@ extern "C" void app_main(void)
             }
             
             NimBLEDevice::deleteClient(pClient);
-			ESP_LOGI(TAG_BLE, "Exit");
+			ESP_LOGI(TAG_BLE, "Device found. Exit.");
+			
+			break;
         }
     }
+	
+	if (!ENGOfound)
+		ESP_LOGI(TAG_BLE, "Device not found. Exit.");
 }
