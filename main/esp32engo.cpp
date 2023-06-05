@@ -69,7 +69,7 @@ void Demo(uint8_t demo_id, uint8_t** command, int* length)
 	//query id must be set to 0 for the demo command, because there is no query id
 	
 	(*command)[3] = 6; //size of all is 6 now
-	(*command)[4] = 1; //data for the command, demo in this case
+	(*command)[4] = demo_id; //data for the command - parameter for the demo in this case
 	
 	*length = 6; //must also reserve 2 for header / footer		
 }
@@ -93,7 +93,7 @@ void send_command(NimBLEClient *pClient)
 			uint8_t* command = NULL;
 			int* length = (int*)malloc(sizeof(int));//total length of the command
 			
-            Demo(1, &command, length);
+            Demo(0, &command, length);
 			AddHF(&command, *length);
 			
 			//ENGO is Big Edian
