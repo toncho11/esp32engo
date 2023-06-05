@@ -9,6 +9,7 @@ The extension of this file must be .cpp and you need to use 'extern "C" void app
 #include "esp_log.h"
 #include "NimBLEDevice.h"
 #include "EngoServicesCharacteristics.h"
+#include "inttypes.h"
 
 const char* TAG_BLE = "esp32engo";
 
@@ -66,13 +67,32 @@ void send_command(NimBLEClient *pClient)
 			
 			//construct and send 
 			
+			//uint8_t payload = 2;
+			
+			uint8_t* command = (uint8_t*)malloc(6);
+			command[0] = 0xFF; //start
+			command[1] = 0x03; //command id - demo now
+			command[2] = 0;
+			//*command[2] = 1; //Command Format, 
+			//*command[2] << 4;
+			//bit 5 is the size of the length, must be 0 for demo
+			//bit 4 to 1 defines the size of the query id
+			//query id must be set to 0 for the demo command, because there is no query id
+			
+			command[3] = 6; //size of all is 6 now
+			command[4] = 1; //data for the command, demo in this case
+			command[5] = 0xAA;
+			
+            
+
+			
 			//ENGO is Big Edian
 			//ESP32 is Little Endian
 			//const uint8_t *command = (uint8_t*)malloc(7);
 			
 			//swap bytes only for values in the command that are bigger than 1 byte
 			
-			//bool state = pCharacteristic->writeValue(command, 7, true);
+			bool state = pCharacteristic->writeValue(command, 7, true);
 		}
 		else
 		{
@@ -140,7 +160,7 @@ extern "C" void app_main(void)
                 ESP_LOGE(TAG_BLE, "Could not connect to device!");
             }
             
-            NimBLEDevice::deleteClient(pClient);
+            //NimBLEDevice::deleteClient(pClient);
 			ESP_LOGI(TAG_BLE, "Device found. Exit.");
 			
 			break;
