@@ -12,6 +12,7 @@ The extension of this file must be .cpp and you need to use 'extern "C" void app
 #include "NimBLEDevice.h"
 #include "EngoServicesCharacteristics.h"
 #include "inttypes.h"
+#include "endian.h" //for the host to be functions
 
 const char* TAG_BLE = "esp32engo";
 
@@ -56,6 +57,56 @@ void AddHF(uint8_t** command, int length)
 	(*command)[0] = 0xFF; //start
 	(*command)[length - 1] = 0xAA; //end
 }
+
+/* s16 x
+s16 y
+u8 r
+u8 f
+u8 c
+str string[255] */
+//TODO: MSB check
+
+void Text(int16_t x, int16_t y, uint8_t r, uint8_t f, uint8_t c, const char* text, uint8_t** command, int* length)
+{
+	ESP_LOGI(TAG_BLE, "text_command entered");
+	
+	int str_length = strlen(text);
+	
+	*length = 13; //total length of command
+	
+	*command = (uint8_t*)malloc(*length);
+	
+	(*command)[1] = 0x37; //txt command
+	
+	(*command)[2] = 0; //TODO: calculate the text length and decide if the length of the command is 1 or 2 bytes
+	
+	(*command)[3] = *length;
+	
+	//next is data for the command - parameters for the text 
+	
+	//takes 2 bytes
+	//x = htobe16(x);
+	//(*command)[4] = (x >> (8*0)) & 0xff; 
+	//(*command)[5] = (x >> (8*1)) & 0xff; 
+	(*command)[4] = htobe16(x); //host to big endian 16
+	
+	//y = htobe16(y);
+	//(*command)[6] = (y >> (8*0)) & 0xff; 
+	//(*command)[7] = (y >> (8*1)) & 0xff; 
+	
+	//takes 2 bytes
+	//*(command+6) = htobe16(y);
+	(*command)[6] = htobe16(y);
+	
+	(*command)[8]  = r;
+	(*command)[9]  = f;
+	(*command)[10] = c;
+	
+	(*command)[11] = 'p'; //text
+	
+	//*length = total_length; //must also reserve 2 for header / footer		
+}
+
 void Demo(uint8_t demo_id, uint8_t** command, int* length)
 {
 	*command = (uint8_t*)malloc(6);
@@ -93,18 +144,23 @@ void send_command(NimBLEClient *pClient)
 			uint8_t* command = NULL;
 			int* length = (int*)malloc(sizeof(int));//total length of the command
 			
+			bool state;
+			
             Demo(0, &command, length);
 			AddHF(&command, *length);
+			free(command);
+			state = pCharacteristic->writeValue(command, *length, true);
+			
+			Text(100, 100, 4, 2, 15, "text", &command, length);
+			AddHF(&command, *length);
+			state = pCharacteristic->writeValue(command, *length, true);
+			free(command);
 			
 			//ENGO is Big Edian
 			//ESP32 is Little Endian
 			//const uint8_t *command = (uint8_t*)malloc(7);
 			
 			//swap bytes only for values in the command that are bigger than 1 byte
-			
-			bool state = pCharacteristic->writeValue(command, *length, true);
-			
-			free(command);
 		}
 		else
 		{
