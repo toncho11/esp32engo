@@ -129,12 +129,19 @@ void send_command(NimBLEClient *pClient)
 			
 			bool state;
 			
-            Demo(0, &command, length);
+            /*  
+			Demo(0, &command, length);
 			AddHF(&command, *length);
+			state = pCharacteristic->writeValue(command, *length, true); 
 			free(command);
-			state = pCharacteristic->writeValue(command, *length, true);
+			*/
 			
-			Text(280, 100, 4, 2, 15, "Jonny Quest", &command, length);
+			Text(100, 180, 4, 2, 15, "02  45", &command, length);
+			AddHF(&command, *length);
+			state = pCharacteristic->writeValue(command, *length, true);
+			free(command);
+			
+			Text(240, 50, 4, 2, 15, "C02 75", &command, length);
 			AddHF(&command, *length);
 			state = pCharacteristic->writeValue(command, *length, true);
 			free(command);
