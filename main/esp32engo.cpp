@@ -12,6 +12,11 @@ The extension of this file must be .cpp and you need to use 'extern "C" void app
 #include "inttypes.h"
 #include "endian.h" //for the host to be functions
 
+//delay function
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+
+
 const char* TAG_BLE = "esp32engo";
 
 void print_info(NimBLEClient *pClient)
@@ -20,7 +25,7 @@ void print_info(NimBLEClient *pClient)
 	
 	NimBLERemoteService *pService = pClient->getService(GenericAccessUUID);
                 
-/* 	std::vector< NimBLERemoteCharacteristic * >* chars = pService->getCharacteristics(true);
+    /*std::vector< NimBLERemoteCharacteristic * >* chars = pService->getCharacteristics(true);
 	
 	for (int c=0; c<chars->size(); c++)
 	{
@@ -77,11 +82,13 @@ void Text(int16_t x, int16_t y, uint8_t r, uint8_t f, uint8_t c, const char* tex
 	
 	//next is the data for the command - parameters for the text 
 	
-	//takes 2 bytes
-	(*command)[4] = htobe16(x); //host to big endian 16
+	//takes 2 bytes, to big endian mode by byte swap
+    (*command)[4] = (x >> 8) & 0xFF; //second byte as first one
+    (*command)[5] = (x >> 0) & 0xFF; 
 	
-	//takes 2 bytes
-	(*command)[6] = htobe16(y);
+	//takes 2 bytes, to big endian mode by byte swap
+	(*command)[6] = (y >> 8) & 0xFF;
+    (*command)[7] = (y >> 0) & 0xFF;
 	
 	(*command)[8]  = r;
 	(*command)[9]  = f;
@@ -136,16 +143,25 @@ void send_command(NimBLEClient *pClient)
 			free(command);
 			*/
 			
-			Text(100, 180, 4, 2, 15, "02  45", &command, length);
-			AddHF(&command, *length);
-			state = pCharacteristic->writeValue(command, *length, true);
-			free(command);
-			
-			Text(240, 50, 4, 2, 15, "C02 75", &command, length);
-			AddHF(&command, *length);
-			state = pCharacteristic->writeValue(command, *length, true);
-			free(command);
-			
+			int x = 300;
+			int y = 100;
+
+			for (int i=0; i < x ; i=i+4)
+			{
+				ESP_LOGI(TAG_BLE, "Start i: %d", i);
+				Text(i, 180, 4, 2, 15, "02  45", &command, length);
+				AddHF(&command, *length);
+				state = pCharacteristic->writeValue(command, *length, true);
+				free(command);
+				
+				ESP_LOGI(TAG_BLE, "End i: %d", i);
+				//Text(x, 50, 4, 2, 15, "C02 75", &command, length);
+				//AddHF(&command, *length);
+				//state = pCharacteristic->writeValue(command, *length, true);
+				//free(command);
+
+				vTaskDelay(50 / portTICK_PERIOD_MS);
+			}
 			//ENGO is Big Edian
 			//ESP32 is Little Endian
 			//swap bytes only for values in the command that are bigger than 1 byte
