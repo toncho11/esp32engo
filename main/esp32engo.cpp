@@ -10,15 +10,22 @@ The extension of this file must be .cpp and you need to use 'extern "C" void app
 #include "NimBLEDevice.h"
 #include "EngoServicesCharacteristics.h"
 #include "inttypes.h"
-#include "endian.h" //for the host to be functions
+//#include "endian.h" //for the host to be functions
 
 //delay function
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-
 const char* TAG_BLE = "esp32engo";
 
+void clear_screen(uint8_t** command, size_t* length)
+{
+	*length = 5;
+	//*command = (uint8_t*)malloc(*length);
+	(*command)[1] = 0x1; //clear command
+	(*command)[2] = 0; 
+	(*command)[3] = *length;
+}
 void print_info(NimBLEClient *pClient)
 {
 	ESP_LOGI(TAG_BLE, "print_info entered");
@@ -72,7 +79,7 @@ void Text(int16_t x, int16_t y, uint8_t r, uint8_t f, uint8_t c, const char* tex
 	
 	*length = 12 + str_length; //total length of command
 	
-	*command = (uint8_t*)malloc(*length);
+	//*command = (uint8_t*)malloc(*length);
 	
 	(*command)[1] = 0x37; //txt command
 	
@@ -99,12 +106,10 @@ void Text(int16_t x, int16_t y, uint8_t r, uint8_t f, uint8_t c, const char* tex
 
 void Demo(uint8_t demo_id, uint8_t** command, size_t* length)
 {
-	*command = (uint8_t*)malloc(6);
+	//*command = (uint8_t*)malloc(6);
 	
 	(*command)[1] = 0x03; //command id - demo now
-	(*command)[2] = 0;
-	//*command[2] = 1; //Command Format, 
-	//*command[2] << 4;
+	(*command)[2] = 0; //Command Format
 	//bit 5 is the size of the length, must be 0 for demo
 	//bit 4 to 1 defines the size of the query id
 	//query id must be set to 0 for the demo command, because there is no query id
@@ -131,7 +136,8 @@ void send_command(NimBLEClient *pClient)
 		{ 
 			ESP_LOGI(TAG_BLE, "Found characteristic: ActiveLookCommandsInterface_RXActiveLookUUID");
 			
-			uint8_t* command = NULL;
+			//TODO: maximum set to 160 currently
+			uint8_t* command = (uint8_t*)malloc(160); //make a warning if a command goes beyond the maximum
 			size_t* length = (size_t*)malloc(sizeof(size_t));//total length of the command
 			
 			bool state;
@@ -148,19 +154,26 @@ void send_command(NimBLEClient *pClient)
 
 			for (int i=0; i < x ; i=i+4)
 			{
-				ESP_LOGI(TAG_BLE, "Start i: %d", i);
-				Text(i, 180, 4, 2, 15, "02  45", &command, length);
+				//ESP_LOGI(TAG_BLE, "Start i: %d", i);
+				
+				Text(i, 180, 4, 2, 15, "O2 45", &command, length);
 				AddHF(&command, *length);
 				state = pCharacteristic->writeValue(command, *length, true);
-				free(command);
-				
-				ESP_LOGI(TAG_BLE, "End i: %d", i);
-				//Text(x, 50, 4, 2, 15, "C02 75", &command, length);
-				//AddHF(&command, *length);
-				//state = pCharacteristic->writeValue(command, *length, true);
+				//free(command);
+
+				Text(i, 150, 4, 2, 15, "CO2 22", &command, length);
+				AddHF(&command, *length);
+				state = pCharacteristic->writeValue(command, *length, true);
 				//free(command);
 
 				vTaskDelay(50 / portTICK_PERIOD_MS);
+
+				clear_screen(&command, length);
+				AddHF(&command, *length);
+				state = pCharacteristic->writeValue(command, *length, true);
+				//free(command);
+
+				//ESP_LOGI(TAG_BLE, "End i: %d", i);
 			}
 			//ENGO is Big Edian
 			//ESP32 is Little Endian
