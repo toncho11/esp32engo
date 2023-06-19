@@ -156,7 +156,7 @@ void send_command(NimBLEClient *pClient)
 			{
 				//ESP_LOGI(TAG_BLE, "Start i: %d", i);
 				
-				Text(i, 180, 4, 2, 15, "O2 45", &command, length);
+				Text(i, 180, 4, 2, 15, "O2 34", &command, length);
 				AddHF(&command, *length);
 				state = pCharacteristic->writeValue(command, *length, true);
 				//free(command);
@@ -194,22 +194,23 @@ void send_command(NimBLEClient *pClient)
 	//draw rectangle
 }
 
-extern "C" void app_main(void)  
-{
+void ENGO_connect(NimBLEClient **pClient, bool *found, bool *connected)
+{   
     NimBLEDevice::init("");
     
     NimBLEScan *pScan = NimBLEDevice::getScan();
     NimBLEScanResults results = pScan->start(5); //scan for 10 seconds
     
     //NimBLEUUID serviceUuid(DeviceInformationServiceUUID); //TODO: better filter by manufacturer ID ending by 0x08F2
-    
-	bool ENGOfound = false;
 	
     for(int i = 0; i < results.getCount(); i++) {
 		
         NimBLEAdvertisedDevice device = results.getDevice(i);
         
 		std::string devName = "";
+		
+		*found = false;
+		*connected = false;
 		
 		if (device.haveName())
 		{
@@ -230,28 +231,41 @@ extern "C" void app_main(void)
 		
         if (foundName != std::string::npos) { //TODO: better filter by manufacturer ID ending by 0x08F2
             
-			ENGOfound = true;
+			*found = true;
 			ESP_LOGI(TAG_BLE, "ENGO Device found.");
-			
-			NimBLEClient *pClient = NimBLEDevice::createClient();
+		
+		    *pClient = NimBLEDevice::createClient();
             
-            if (pClient->connect(&device)) 
+            if ((*pClient)->connect(&device)) 
 			{
-				print_info(pClient);
-				send_command(pClient);     
+				*connected = true;
+				print_info(*pClient);  
             } 
 			else 
 			{
-                ESP_LOGE(TAG_BLE, "Could not connect to device!");
+                ESP_LOGE(TAG_BLE, "Could not connect to ENGO device!");
             }
             
-            //NimBLEDevice::deleteClient(pClient);
-			ESP_LOGI(TAG_BLE, "Device found. Exit.");
+			ESP_LOGI(TAG_BLE, "Device found.");
 			
 			break;
         }
-    }
+	}
+}
+extern "C" void app_main(void)  
+{
+    NimBLEClient *pClient = NULL;
 	
-	if (!ENGOfound)
+	bool found;
+	bool connected;
+	
+	ENGO_connect(&pClient, &found, &connected);
+	
+	if (found && connected && pClient != NULL)
+	{
+		send_command(pClient);
+		NimBLEDevice::deleteClient(pClient);
+	}
+	else
 		ESP_LOGI(TAG_BLE, "Device not found. Exit.");
 }
