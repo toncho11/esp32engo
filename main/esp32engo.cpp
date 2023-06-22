@@ -8,25 +8,18 @@ The extension of this file must be .cpp and you need to use 'extern "C" void app
 
 #include "esp_log.h"
 #include "NimBLEDevice.h"
-#include "EngoServicesCharacteristics.h"
 #include "inttypes.h"
-//#include "endian.h" //for the host to be functions
+#include "EngoServicesCharacteristics.h"
+#include "ENGOCommands.h"
+
 
 //delay function
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-const char* TAG_BLE = "esp32engo";
+const char* TAG_BLE = "esp32engo_main";
 
-void clear_screen(uint8_t** command, size_t* length)
-{
-	*length = 5;
-	//*command = (uint8_t*)malloc(*length);
-	(*command)[1] = 0x1; //clear command
-	(*command)[2] = 0; 
-	(*command)[3] = *length;
-}
-void print_info(NimBLEClient *pClient)
+void ENGO_print_info(NimBLEClient *pClient)
 {
 	ESP_LOGI(TAG_BLE, "print_info entered");
 	
@@ -64,63 +57,22 @@ void print_info(NimBLEClient *pClient)
 
 void AddHF(uint8_t** command, int length)
 {
+	bool bit5is1 = (*command)[2] & (1<<5); //Bit 5 (0bx0000) defines the size of Length, 1: length on 2 bytes, 0 length on 1 byte.
+	
+	if (length < 255 && bit5is1)
+		ESP_LOGE(TAG_BLE, "Detected an error. The size of the length is not set correctly. Bit 5 must be 0!");
+	
+	if (length > 255 && !bit5is1)
+		ESP_LOGE(TAG_BLE, "Detected an error. The size of the length is not set correctly. Bit 5 must be 1!");
+
+	if (length > 532)
+		ESP_LOGE(TAG_BLE, "Detected an error. Command is longer than the maximum allowed length of 533 bytes!");
+
 	(*command)[0] = 0xFF; //start
 	(*command)[length - 1] = 0xAA; //end
 }
 
-void Text(int16_t x, int16_t y, uint8_t r, uint8_t f, uint8_t c, const char* text, uint8_t** command, size_t* length)
-{
-	//ESP_LOGI(TAG_BLE, "text_command entered");
-	
-	size_t str_length = strlen(text);
-	
-	//ESP_LOGI(TAG_BLE, "text length: %d", str_length);
-	//ESP_LOGI(TAG_BLE, "text to show: %s", text);
-	
-	*length = 12 + str_length; //total length of command
-	
-	//*command = (uint8_t*)malloc(*length);
-	
-	(*command)[1] = 0x37; //txt command
-	
-	(*command)[2] = 0; //TODO: calculate the text length and decide if the length of the command is 1 or 2 bytes
-	
-	(*command)[3] = *length;
-	
-	//next is the data for the command - parameters for the text 
-	
-	//takes 2 bytes, to big endian mode by byte swap
-    (*command)[4] = (x >> 8) & 0xFF; //second byte as first one
-    (*command)[5] = (x >> 0) & 0xFF; 
-	
-	//takes 2 bytes, to big endian mode by byte swap
-	(*command)[6] = (y >> 8) & 0xFF;
-    (*command)[7] = (y >> 0) & 0xFF;
-	
-	(*command)[8]  = r;
-	(*command)[9]  = f;
-	(*command)[10] = c;
-	
-	memcpy((*command) + 11, text, str_length); 
-}
-
-void Demo(uint8_t demo_id, uint8_t** command, size_t* length)
-{
-	//*command = (uint8_t*)malloc(6);
-	
-	(*command)[1] = 0x03; //command id - demo now
-	(*command)[2] = 0; //Command Format
-	//bit 5 is the size of the length, must be 0 for demo
-	//bit 4 to 1 defines the size of the query id
-	//query id must be set to 0 for the demo command, because there is no query id
-	
-	(*command)[3] = 6; //size of all is 6 now
-	(*command)[4] = demo_id; //data for the command - parameter for the demo in this case
-	
-	*length = 6; //must also reserve 2 for header / footer		
-}
-
-void send_command(NimBLEClient *pClient)
+void ENGO_send_commands(NimBLEClient *pClient)
 {
 	ESP_LOGI(TAG_BLE, "send_command entered");
 	
@@ -159,22 +111,22 @@ void send_command(NimBLEClient *pClient)
 				Text(i, 180, 4, 2, 15, "O2 34", &command, length);
 				AddHF(&command, *length);
 				state = pCharacteristic->writeValue(command, *length, true);
-				//free(command);
 
 				Text(i, 150, 4, 2, 15, "CO2 22", &command, length);
 				AddHF(&command, *length);
 				state = pCharacteristic->writeValue(command, *length, true);
-				//free(command);
 
 				vTaskDelay(50 / portTICK_PERIOD_MS);
 
 				clear_screen(&command, length);
 				AddHF(&command, *length);
 				state = pCharacteristic->writeValue(command, *length, true);
-				//free(command);
 
 				//ESP_LOGI(TAG_BLE, "End i: %d", i);
 			}
+
+			free(command);
+
 			//ENGO is Big Edian
 			//ESP32 is Little Endian
 			//swap bytes only for values in the command that are bigger than 1 byte
@@ -239,7 +191,7 @@ void ENGO_connect(NimBLEClient **pClient, bool *found, bool *connected)
             if ((*pClient)->connect(&device)) 
 			{
 				*connected = true;
-				print_info(*pClient);  
+				ENGO_print_info(*pClient);  
             } 
 			else 
 			{
@@ -252,6 +204,8 @@ void ENGO_connect(NimBLEClient **pClient, bool *found, bool *connected)
         }
 	}
 }
+
+
 extern "C" void app_main(void)  
 {
     NimBLEClient *pClient = NULL;
@@ -263,8 +217,9 @@ extern "C" void app_main(void)
 	
 	if (found && connected && pClient != NULL)
 	{
-		send_command(pClient);
+		ENGO_send_commands(pClient);
 		NimBLEDevice::deleteClient(pClient);
+		ESP_LOGI(TAG_BLE, "Done.");
 	}
 	else
 		ESP_LOGI(TAG_BLE, "Device not found. Exit.");

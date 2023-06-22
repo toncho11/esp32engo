@@ -5,6 +5,9 @@ custom for dedicated ActiveLook commands and firmware updates).
 
 */
 
+#ifndef ENGO_SERVICES_H
+#define ENGO_SERVICES_H
+
 #include "inttypes.h"
 #include "NimBLEDevice.h"
 
@@ -50,3 +53,5 @@ static BLEUUID ActiveLookCommandsInterface_TouchEventUUID("0783b03e-8535-b5a0-71
 
 //6 Custom Service Firmware Update
 static BLEUUID FirmwareUpdateServiceUUID("0000FEF5-0000-1000-8000-00805F9B34FB");
+
+#endif
